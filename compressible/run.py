@@ -356,6 +356,7 @@ def advect_h_shock(h0: ti.template(), h1: ti.template(), e0: ti.template(), e1: 
             T_x: ti.template(), T_y: ti.template(), T_z: ti.template(),
             psi: ti.template(), dx: float):
     # x velocity
+    #print(" run advect shock!")
     for i,j,k in h0:
         pos = ti.Vector([i+0.5,j+0.5,k+0.5])*dx
         T_x0, T_y0,T_z0 = interp_u_MAC_vector(T_x, T_y,T_z, pos, dx)
@@ -714,7 +715,7 @@ def accumulate_lamb_visc(
         tem, gradx = interp_grad_2(acc_int, phi_x[I], dx, BL_x=0.5, BL_y=0.5, BL_z=0.5)
         rho, tem3 = interp_grad_2(h, phi_x[I], dx, BL_x=0.5, BL_y=0.5, BL_z=0.5)
         tem, gradusquare = interp_grad_2(u_square, phi_x[I], dx, BL_x=0.5, BL_y=0.5, BL_z=0.5)
-
+  
         grad_lamb_x[I] += F_x[I].dot(gradx / rho + gradusquare * dt)
 
     for I in ti.grouped(phi_y):
@@ -1010,6 +1011,7 @@ def main(from_frame = 0, testing = False):
         
         advect_smoke(smoke, err_smoke, phi_x, phi_y, phi_z, dx)
         
+        '''
         add_fields(err_u_x, init_u_x, err_u_x, -1.) # subtract init_u_x from back_u_x
         add_fields(err_u_y, init_u_y, err_u_y, -1.)
         add_fields(err_u_z, init_u_z, err_u_z, -1.)
@@ -1017,7 +1019,8 @@ def main(from_frame = 0, testing = False):
         add_fields(err_grad_lamb_x, grad_lamb_x, err_grad_lamb_x, -1.)
         add_fields(err_grad_lamb_y, grad_lamb_y, err_grad_lamb_y, -1.)
         add_fields(err_grad_lamb_z, grad_lamb_z, err_grad_lamb_z, -1.)
-
+        
+        
         add_fields(err_h, init_h, err_h, -1.)
         add_fields(err_e, init_e, err_e, -1.)
         add_fields(err_smoke, init_smoke, err_smoke, -1.)
@@ -1033,6 +1036,24 @@ def main(from_frame = 0, testing = False):
         scale_field(err_e, 0.5, err_e)
         scale_field(err_h, 0.5, err_h)
         scale_field(err_smoke, 0.5, err_smoke)
+        '''
+        
+        add_and_scale_fields(err_u_x, init_u_x, err_u_x, -1., err_u_x, 0.5, err_u_x)
+        add_and_scale_fields(err_u_y, init_u_y, err_u_y, -1., err_u_y, 0.5, err_u_y)
+        add_and_scale_fields(err_u_z, init_u_z, err_u_z, -1., err_u_z, 0.5, err_u_z)
+    
+        add_and_scale_fields(err_grad_lamb_x, grad_lamb_x, err_grad_lamb_x, -1., err_grad_lamb_x, 0.5, err_grad_lamb_x)
+        add_and_scale_fields(err_grad_lamb_y, grad_lamb_y, err_grad_lamb_y, -1., err_grad_lamb_y, 0.5, err_grad_lamb_y)
+        add_and_scale_fields(err_grad_lamb_z, grad_lamb_z, err_grad_lamb_z, -1., err_grad_lamb_z, 0.5, err_grad_lamb_z)
+        
+        add_and_scale_fields(err_h, init_h, err_h, -1., err_h, 0.5, err_h)
+        add_and_scale_fields(err_e, init_e, err_e, -1., err_e, 0.5, err_e)
+        add_and_scale_fields(err_smoke, init_smoke, err_smoke, -1., err_smoke, 0.5, err_smoke)
+            
+    
+
+        
+        ###############
 
         advect_u_shock(err_u_x, err_u_y, err_u_z, tmp_u_x, tmp_u_y, tmp_u_z,\
                 err_grad_lamb_x, err_grad_lamb_y, err_grad_lamb_z,\

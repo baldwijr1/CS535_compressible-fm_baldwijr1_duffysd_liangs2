@@ -23,10 +23,13 @@ def add_fields(f1: ti.template(), f2: ti.template(), dest: ti.template(), multip
         
 @ti.kernel
 # Reduce total number of function calls by combining the add and scale field functions
-def add_and_scale_fields(f1: ti.template(), f2: ti.template(), dest: ti.template(), multiplier: float,
-                         a: ti.template(), alpha: float, result: ti.template())
+def add_and_scale_fields(f1: ti.template(), f2: ti.template(), dest: ti.template(), multiplier: float, a: ti.template(), alpha: float, result: ti.template()):
+    # Add
     for I in ti.grouped(dest):
             dest[I] = f1[I] + multiplier * f2[I]
+    # Scale
+    for I in ti.grouped(result):
+        result[I] = alpha * a[I]
     
 
 @ti.func
