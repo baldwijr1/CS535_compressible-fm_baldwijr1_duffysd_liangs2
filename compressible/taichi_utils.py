@@ -20,6 +20,14 @@ def scale_field(a: ti.template(), alpha: float, result: ti.template()):
 def add_fields(f1: ti.template(), f2: ti.template(), dest: ti.template(), multiplier: float):
     for I in ti.grouped(dest):
         dest[I] = f1[I] + multiplier * f2[I]
+        
+@ti.kernel
+# Reduce total number of function calls by combining the add and scale field functions
+def add_and_scale_fields(f1: ti.template(), f2: ti.template(), dest: ti.template(), multiplier: float,
+                         a: ti.template(), alpha: float, result: ti.template())
+    for I in ti.grouped(dest):
+            dest[I] = f1[I] + multiplier * f2[I]
+    
 
 @ti.func
 def lerp(vl, vr, frac):
