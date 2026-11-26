@@ -955,9 +955,10 @@ def main(from_frame = 0, testing = False):
         # add_fields_scalar(psi_z, boundary_y[None], 0.5 * curr_dt)
         # add_fields_scalar(psi, boundary_y[None], 0.5 * curr_dt)
         
-        copy_to(u_x, tmp_u_x)
-        copy_to(u_y, tmp_u_y)
-        copy_to(u_z, tmp_u_z)
+        # copy_to(u_x, tmp_u_x)
+        # copy_to(u_y, tmp_u_y)
+        # copy_to(u_z, tmp_u_z)
+        copy_to_xyz(u_x, tmp_u_x, u_y, tmp_u_y, u_z, tmp_u_z)
         advect_u(tmp_u_x, tmp_u_y, tmp_u_z, u_x, u_y, u_z, \
                 T_x, T_y, T_z, psi_x, psi_y, psi_z, dx)
         
@@ -1063,13 +1064,15 @@ def main(from_frame = 0, testing = False):
         advect_h_shock(err_h, tmp_h, err_e, tmp_e, T_x, T_y, T_z, psi, dx)
         advect_smoke(err_smoke, tmp_smoke, psi_x, psi_y, psi_z, dx) # advect error
 
-        add_fields(u_x, tmp_u_x, err_u_x, -1.) # subtract err
-        add_fields(u_y, tmp_u_y, err_u_y, -1.)
-        add_fields(u_z, tmp_u_z, err_u_z, -1.)
+        #add_fields(u_x, tmp_u_x, err_u_x, -1.) # subtract err
+        #add_fields(u_y, tmp_u_y, err_u_y, -1.)
+        #add_fields(u_z, tmp_u_z, err_u_z, -1.)
+        add_fields_xyz(u_x, tmp_u_x, err_u_x, u_y, tmp_u_y, err_u_y, u_z, tmp_u_z, err_u_z, -1.)
 
-        add_fields(grad_lamb_x_curr, grad_lamb_x_tmp, err_grad_lamb_x, -1.) # subtract err
-        add_fields(grad_lamb_y_curr, grad_lamb_y_tmp, err_grad_lamb_y, -1.)
-        add_fields(grad_lamb_z_curr, grad_lamb_z_tmp, err_grad_lamb_z, -1.)
+        #add_fields(grad_lamb_x_curr, grad_lamb_x_tmp, err_grad_lamb_x, -1.) # subtract err
+        #add_fields(grad_lamb_y_curr, grad_lamb_y_tmp, err_grad_lamb_y, -1.)
+        #add_fields(grad_lamb_z_curr, grad_lamb_z_tmp, err_grad_lamb_z, -1.)
+        add_fields_xyz(grad_lamb_x_curr, grad_lamb_x_tmp, err_grad_lamb_x, grad_lamb_y_curr, grad_lamb_y_tmp, err_grad_lamb_y, grad_lamb_z_curr, grad_lamb_z_tmp, err_grad_lamb_z, -1.)
 
         add_fields(h, tmp_h, err_h, -1.)
         add_fields(e, tmp_e, err_e, -1.)
@@ -1089,27 +1092,34 @@ def main(from_frame = 0, testing = False):
             clamp_u(err_grad_lamb_y, grad_lamb_y_curr, grad_lamb_y_tmp)
             clamp_u(err_grad_lamb_z, grad_lamb_z_curr, grad_lamb_z_tmp)
 
-            copy_to(tmp_u_x, u_x)
-            copy_to(tmp_u_y, u_y)
-            copy_to(tmp_u_z, u_z)
+            #copy_to(tmp_u_x, u_x)
+            #copy_to(tmp_u_y, u_y)
+            #copy_to(tmp_u_z, u_z)
+            copy_to_xyz(tmp_u_x, u_x, tmp_u_y, u_y, tmp_u_z, u_z)
 
-            copy_to(grad_lamb_x_tmp, grad_lamb_x_curr)
-            copy_to(grad_lamb_y_tmp, grad_lamb_y_curr)
-            copy_to(grad_lamb_z_tmp, grad_lamb_z_curr)
+            #copy_to(grad_lamb_x_tmp, grad_lamb_x_curr)
+            #copy_to(grad_lamb_y_tmp, grad_lamb_y_curr)
+            #copy_to(grad_lamb_z_tmp, grad_lamb_z_curr)
+            copy_to_xyz(grad_lamb_x_tmp, grad_lamb_x_curr, grad_lamb_y_tmp, grad_lamb_y_curr, grad_lamb_z_tmp, grad_lamb_z_curr)
         else:
-            copy_to(err_u_x, u_x)
-            copy_to(err_u_y, u_y)
-            copy_to(err_u_z, u_z)  
-            copy_to(err_grad_lamb_x, grad_lamb_x_curr)
-            copy_to(err_grad_lamb_y, grad_lamb_y_curr)
-            copy_to(err_grad_lamb_z, grad_lamb_z_curr)
+            #copy_to(err_u_x, u_x)
+            #copy_to(err_u_y, u_y)
+            #copy_to(err_u_y, u_y)  
+            copy_to_xyz(err_u_x, u_x, err_u_y, u_y, err_u_z, u_z)
+            
+            #copy_to(err_grad_lamb_x, grad_lamb_x_curr)
+            #copy_to(err_grad_lamb_y, grad_lamb_y_curr)
+            #copy_to(err_grad_lamb_z, grad_lamb_z_curr)
+            copy_to_xyz(err_grad_lamb_x, grad_lamb_x_curr, err_grad_lamb_y, grad_lamb_y_curr, err_grad_lamb_z, grad_lamb_z_curr)
+            
         copy_to(err_h, h)
         copy_to(err_e, e)
 
-        add_fields(u_x, grad_lamb_x_curr, u_x, 1.0)
-        add_fields(u_y, grad_lamb_y_curr, u_y, 1.0)
-        add_fields(u_z, grad_lamb_z_curr, u_z, 1.0)
 
+#        add_fields(u_x, grad_lamb_x_curr, u_x, 1.0)
+#        add_fields(u_y, grad_lamb_y_curr, u_y, 1.0)
+#        add_fields(u_z, grad_lamb_z_curr, u_z, 1.0)
+        add_fields_xyz(u_x, grad_lamb_x_curr, u_x, u_y, grad_lamb_y_curr, u_y, u_z, grad_lamb_z_curr, u_z, 1.0)
 
         enforce_velocity_shock(u_x, u_y, u_z, acc_int, u_square, h, e, dx, curr_dt, boundary_mask)
         enforce_boundary(u_x, u_y, u_z, h, boundary_mask)
