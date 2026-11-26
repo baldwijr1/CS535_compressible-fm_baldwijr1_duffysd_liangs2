@@ -10,6 +10,18 @@ data_type = ti.f32
 def copy_to(source: ti.template(), dest: ti.template()):
     for I in ti.grouped(source):
         dest[I] = source[I]
+        
+@ti.kernel ## CS535 FUNCTION
+# Combine separate copy calls into one function
+def copy_to_xyz(sourcex: ti.template(), destx: ti.template(),
+                sourcey: ti.template(), desty: ti.template(),
+                sourcez: ti.template(), destz: ti.template()):
+    for I in ti.grouped(sourcex):
+        destx[I] = sourcex[I]
+    for I in ti.grouped(sourcey):
+        desty[I] = sourcey[I]
+    for I in ti.grouped(sourcez):
+        destz[I] = sourcez[I]
 
 @ti.kernel
 def scale_field(a: ti.template(), alpha: float, result: ti.template()):
@@ -21,7 +33,7 @@ def add_fields(f1: ti.template(), f2: ti.template(), dest: ti.template(), multip
     for I in ti.grouped(dest):
         dest[I] = f1[I] + multiplier * f2[I]
         
-@ti.kernel
+@ti.kernel ## CS535 FUNCTION
 # Reduce total number of function calls by combining the add and scale field functions
 def add_and_scale_fields(f1: ti.template(), f2: ti.template(), dest: ti.template(), multiplier: float, a: ti.template(), alpha: float, result: ti.template()):
     # Add
@@ -30,6 +42,22 @@ def add_and_scale_fields(f1: ti.template(), f2: ti.template(), dest: ti.template
     # Scale
     for I in ti.grouped(result):
         result[I] = alpha * a[I]
+        
+@ti.kernel ## CS535 FUNCTION
+# Original file has multiple instances of add_fields function being called for x, y, then z variables. This
+# reduces the total # of ti kernel calls by taking three xyz variables and adding them together in the
+# same function.
+# !! May want to update this to pass in a vector containing each xyz instead
+def add_fields_xyz(f1x: ti.template(), f2x: ti.template(), destx: ti.template(), 
+                   f1y: ti.template(), f2y: ti.template(), desty: ti.template(), 
+                   f1z: ti.template(), f2z: ti.template(), destz: ti.template(), 
+                   multiplier: float):
+    for I in ti.grouped(destx):
+            destx[I] = f1x[I] + multiplier * f2x[I]
+    for I in ti.grouped(desty):
+            desty[I] = f1y[I] + multiplier * f2y[I]
+    for I in ti.grouped(destz):   
+            destz[I] = f1z[I] + multiplier * f2z[I]
     
 
 @ti.func
