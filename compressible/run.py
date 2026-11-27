@@ -14,7 +14,23 @@ import numpy as np
 
 dx = 1./res_y
 
-ti.init(arch=ti.cuda, device_memory_GB=11, debug = False)
+############### Performance Globals ###############
+# Set equal to number of threads in cpu
+thread_count = 12
+# Set equal to number of cuda cores if using cuda
+cuda_core_count = 0
+# Set equal to device memory
+memory_GB = 16
+
+# *** note for final benchmark test:
+# not sure if the ti.loop_config function needs to be called for *every* loop, or once per function,
+# or just once up here. i will figure out how many calls are actually needed and
+# will add/remove lines if needed
+
+###################################################
+
+
+ti.init(arch=ti.cuda, device_memory_GB=memory_GB, debug = False)
 # torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 # solver
@@ -151,6 +167,7 @@ boundary_y[None] = mach_number
 @ti.kernel
 def calc_max_speed(u_x: ti.template(), u_y: ti.template(), u_z: ti.template()):
     max_speed[None] = 1.e-3 # avoid dividing by zero
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i, j, k in ti.ndrange(res_x, res_y, res_z):
         u = 0.5 * (u_x[i, j, k] + u_x[i+1, j, k])
         v = 0.5 * (u_y[i, j, k] + u_y[i, j+1, k])
@@ -162,6 +179,7 @@ def calc_max_speed(u_x: ti.template(), u_y: ti.template(), u_z: ti.template()):
 @ti.kernel
 def reset_to_identity(psi:ti.template(),psi_x: ti.template(), psi_y: ti.template(), psi_z: ti.template(), 
                     T_x: ti.template(), T_y: ti.template(), T_z: ti.template()):
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for I in ti.grouped(psi):
         psi[I] = X[I]
     for I in ti.grouped(psi_x):
@@ -343,6 +361,7 @@ def advect_h(h0: ti.template(), h1: ti.template(),
             T_x: ti.template(), T_y: ti.template(), T_z: ti.template(),
             psi: ti.template(), dx: float):
     # x velocity
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in h0:
         pos = ti.Vector([i+0.5,j+0.5,k+0.5])*dx
         T_x0, T_y0,T_z0 = interp_u_MAC_vector(T_x, T_y,T_z, pos, dx)
@@ -357,6 +376,7 @@ def advect_h_shock(h0: ti.template(), h1: ti.template(), e0: ti.template(), e1: 
             psi: ti.template(), dx: float):
     # x velocity
     #print(" run advect shock!")
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in h0:
         pos = ti.Vector([i+0.5,j+0.5,k+0.5])*dx
         T_x0, T_y0,T_z0 = interp_u_MAC_vector(T_x, T_y,T_z, pos, dx)
@@ -371,6 +391,7 @@ def advect_h_shock(h0: ti.template(), h1: ti.template(), e0: ti.template(), e1: 
 @ti.kernel
 def advect_smoke(smoke0: ti.template(), smoke1: ti.template(), 
             psi_x: ti.template(), psi_y: ti.template(), psi_z: ti.template(), dx: float):
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i, j, k in ti.ndrange(res_x, res_y, res_z):
         psi_c = 1./6 * (psi_x[i, j, k] + psi_x[i+1, j, k] + \
                         psi_y[i, j, k] + psi_y[i, j+1, k] + \
@@ -378,12 +399,14 @@ def advect_smoke(smoke0: ti.template(), smoke1: ti.template(),
         smoke1[i,j,k] = interp_1(smoke0, psi_c, dx)
 
 def diffuse_sizing():
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for _ in range(1024):
         diffuse_grid(sizing, tmp_sizing)
 
 @ti.kernel
 def clamp_smoke(smoke0: ti.template(), smoke1: ti.template(), 
             psi_x: ti.template(), psi_y: ti.template(), psi_z: ti.template(), dx: float):
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i, j, k in ti.ndrange(res_x, res_y, res_z):
         psi_c = 1./6 * (psi_x[i, j, k] + psi_x[i+1, j, k] + \
                         psi_y[i, j, k] + psi_y[i, j+1, k] + \
@@ -394,6 +417,7 @@ def clamp_smoke(smoke0: ti.template(), smoke1: ti.template(),
 # limit u with u1, write to u2
 @ti.kernel
 def clamp_u(u: ti.template(), u1: ti.template(), u2: ti.template()):
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in u:
         u1_l = sample(u1, i-1, j, k)
         u1_r = sample(u1, i+1, j, k)
@@ -427,11 +451,13 @@ def clamp_u(u: ti.template(), u1: ti.template(), u2: ti.template()):
 @ti.kernel
 def enforce_boundary(u_x:ti.template(), u_y:ti.template(), u_z:ti.template(), h:ti.template(), boundary_mask:ti.template()):
     ii,jj,kk=u_x.shape
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in u_x:
         if(i==0 or i==ii-1):
             u_x[i,j,k]=boundary_y[None]
 
     ii,jj,kk=u_y.shape
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in u_y:
         if(j==0):
             u_y[i,j,k]=u_y[i,j+1,k]
@@ -439,12 +465,14 @@ def enforce_boundary(u_x:ti.template(), u_y:ti.template(), u_z:ti.template(), h:
             u_y[i,j,k]=u_y[i,j-1,k]
 
     ii,jj,kk=u_z.shape
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in u_z:
         if(k==0):
             u_z[i,j,k]=u_z[i,j,k+1]
         if k==kk-1:
             u_z[i,j,k]=u_z[i,j,k-1]
-
+            
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in boundary_mask:
         if boundary_mask[i,j,k] != 0:
             u_x[i, j, k] = -0
@@ -456,6 +484,7 @@ def enforce_boundary(u_x:ti.template(), u_y:ti.template(), u_z:ti.template(), h:
 
 @ti.kernel
 def set_grid_boundary(boundary_mask:ti.template(),u_x:ti.template(),u_y:ti.template(), u_z:ti.template()):
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in boundary_mask:
         if(boundary_mask[i,j,k] == 1):
             u_x[i,j,k]=-0
@@ -468,6 +497,7 @@ def set_grid_boundary(boundary_mask:ti.template(),u_x:ti.template(),u_y:ti.templ
 
 @ti.kernel
 def set_grid_boundary_h(boundary_mask:ti.template(),h:ti.template()):
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in boundary_mask:
         if(boundary_mask[i,j,k] == 1):
             h[i,j,k]=1.0           
@@ -485,19 +515,22 @@ def enforce_velocity_new(
     dx:float,
     dt:float
 ):
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for I in ti.grouped(h):
         v,tem=interp_grad_2(acc_int,psi[I],dx)
         acc_int_new[I]=v -dt*gravity*h[I]**gamma + dt*u_square[I] 
-    
+        
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in u_x:
         grad = (sample(acc_int_new,i,j,k)-sample(acc_int_new,i-1,j,k))/dx
         u_x[i,j,k]+=grad
     
-
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in u_y:
         grad=(sample(acc_int_new,i,j,k)-sample(acc_int_new,i,j-1,k))/dx
         u_y[i,j,k]+=grad
-
+        
+    ti.loop_config(parallelize=thread_count, block_dim=cuda_core_count)
     for i,j,k in u_z:
         grad=(sample(acc_int_new,i,j,k)-sample(acc_int_new,i,j,k-1))/dx
         u_z[i,j,k]+=grad
